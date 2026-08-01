@@ -329,11 +329,6 @@ used, not the textbook phrasing. Name the bottleneck explicitly: which
 single statement, if proved, closes the conjecture.}}</p>
 <h3 id="the-approach-and-why-it-is-strong">The approach, and why it is
 strong</h3>
-<p>{{Two to five numbered points. What structural results the attack
-rests on, which reductions are exact (equivalences) versus lossy
-(sufficient conditions), where the constants are paid and how often. If
-surrogate quantities keep failing for a common structural reason, state
-that reason once, here, so nobody re-proposes the pattern.}}</p>
 <h3 id="what-is-proved">What is proved</h3>
 <p><a href="RESULTS.md"><code>RESULTS.md</code></a> is the table. {{One
 paragraph summary. End with the honest scope line, e.g.: “These are
@@ -351,47 +346,6 @@ sentence of next decisive step. Before proposing anything else, read <a
 href="REFUTED_CONJECTURES.md"><code>REFUTED_CONJECTURES.md</code></a> —
 and note that it is partial, so absence from it is not evidence a route
 is alive.}}</p>
-<hr />
-<h2 id="historical-framing-retired">Historical framing (retired)</h2>
-<p><em>Kept so that older notes remain readable. None of this is the
-live target.</em></p>
-<p>{{When the programme’s framing moves on, do not delete the old
-framing — move it here, say exactly what superseded it and where the
-numbers now live. Old numerical findings are usually still correct; what
-retires is the <em>framing</em>, and this section is where the two are
-separated.}}</p>
-<hr />
-<h2 id="the-lean-formalisation-and-who-writes-it">The Lean
-formalisation, and who writes it</h2>
-<p><code>lean/</code> is compiled by <code>lake build</code> in CI
-(<code>.github/workflows/lean-build.yml</code>). A second workflow,
-<code>.github/workflows/ai-lean-generate.yml</code>, calls the reusable <a
-href="https://github.com/eyalk11/ai-lean-generate"><code>eyalk11/ai-lean-generate</code></a>
-action. <strong>These two have different trust levels and the
-distinction matters when reviewing.</strong></p>
-<h3 id="the-main-approach-one-file-per-manuscript-part">The main
-approach: one file per manuscript part</h3>
-<p><strong>A formalisation of a Part-X result belongs in
-<code>lean/part_&lt;x&gt;.lean</code>.</strong> The part files mirror
-the parts of <a href="master.tex"><code>master.tex</code></a>
-one-to-one, and that correspondence is what makes the manuscript
-auditable against Lean at all: a reviewer holding a section of the TeX
-should be able to open the matching part file and find the same
-theorems, in the same order, under recognisable names.</p>
-<p>So, when adding a result:</p>
-<ul>
-<li>Put it in the part file that matches the manuscript section it comes
-from. Do not open a new topic file merely because the result is new — a
-new file splits the part’s content across two places and the
-correspondence is lost.</li>
-<li>Non-part files are shared machinery, external inputs, and
-pre-manuscript working modules. Add to them when you are extending that
-machinery; a <em>numbered manuscript theorem</em> still goes in its part
-file, importing whatever machinery it needs.</li>
-<li>A genuinely new module — a new mechanism with no manuscript part yet
-— is fine, but it must be registered in the <code>roots</code> list (see
-“Packaging gotcha”) and named so that its subject is obvious.</li>
-</ul>
 <h3 id="state-the-theorem-even-when-you-cannot-prove-it">State the
 theorem even when you cannot prove it</h3>
 <p>An unproved statement is worth writing down. Formalising the
@@ -419,52 +373,25 @@ placeholder.</li>
 declarations are statements only. A stated-but-unproved theorem must
 never be listed as coverage.</li>
 </ul>
-<h3 id="ai-lean-generate-does-not-open-pull-requests">AI Lean Generate
-does not open pull requests</h3>
-<p>It is dispatched manually (<code>workflow_dispatch</code>) or called
-with a <code>pr_number</code> against a pull request that
-<strong>already exists</strong>. Its steps are: read the PR diff →
-install the toolchain and run the project’s own
-<code>lake exe cache get; lake build</code> → hand the diff to a coding
-agent, which writes or repairs Lean files → compile them independently →
-and, because the caller passes <code>publish: true</code>, <strong>push
-its own commits onto the PR branch</strong> and comment.</p>
-<p>So on any PR that has been through this workflow, authorship is
-mixed:</p>
-<table>
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: left;">author</th>
-<th style="text-align: left;">what it is</th>
-<th style="text-align: left;">trust</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: left;">a human, or an agent acting on
-instructions</td>
-<td style="text-align: left;">the mathematics, and the initial Lean
-statements</td>
-<td style="text-align: left;">reviewed as usual</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">the AI Lean Generate bot</td>
-<td style="text-align: left;">later commits that make those statements
-compile</td>
-<td style="text-align: left;"><strong>see below</strong></td>
-</tr>
-</tbody>
-</table>
-<p>Use <code>git log --format='%h %an %s'</code> on the branch to
-separate them before reviewing. A run that dies before its “Generate and
-independently verify Lean files” step has authored nothing at all except
-a failure comment — check the step list, not just the red or green
-mark.</p>
+<h3
+id="authenticate-ai-lean-generate-with-claude-setup-token-recommended">Authenticate
+AI Lean Generate with <code>claude setup-token</code> (recommended)</h3>
+<p>The included <code>.github/workflows/ai-lean-generate.yml</code>
+selects the GitHub environment <code>main</code> and inherits its
+secrets. For a Claude Pro or Max account, generate or refresh a Claude
+Code OAuth token on a trusted local machine signed in to the account
+that should fund the runs:</p>
+<pre class="text"><code>claude setup-token</code></pre>
+<p>Then update this repository’s <code>main</code> environment secret.
+The command creates <code>CLAUDE_CODE_OAUTH_TOKEN</code> if it is
+missing and replaces its current value if it already exists:</p>
+<pre class="text"><code>gh secret set CLAUDE_CODE_OAUTH_TOKEN --env main</code></pre>
+<p>The equivalent UI path is <strong>Settings → Environments → main →
+Environment secrets → CLAUDE_CODE_OAUTH_TOKEN → Update</strong>. Never
+commit the token, paste it into a pull request, or put it directly in
+the workflow file. Run <code>claude setup-token</code> again and update
+the same environment secret whenever the token is exposed, revoked, or
+tied to the wrong Claude account.</p>
 <h3 id="a-green-check-is-not-a-proof-of-what-you-meant">A green check is
 not a proof of what you meant</h3>
 <p>The agent’s objective is to make the build succeed. That is not the
@@ -556,6 +483,7 @@ special case, retain the corresponding <code>CONJ_…</code>,
 reference note describes the limitation. The note is an index for
 reviewers, not a substitute for comparing the Lean statement with the
 authoritative manuscript.</p>
+<p>Also Update LEAN_STATE.md</p>
 <h3 id="packaging-gotcha">Packaging gotcha</h3>
 <p>The <code>lean_lib</code> in <code>lakefile.toml</code> pins an
 explicit <code>roots</code> list and no <code>globs</code>. The default
@@ -606,19 +534,6 @@ reader finds out a number they saw elsewhere is dead.}}</td>
 and which credited items were later withdrawn. Papers themselves go in
 <code>lit/</code>. If no item in the scan supplies an inequality the
 programme can use, say exactly that.}}</p>
-<h2 id="reproducing-the-numbers">Reproducing the numbers</h2>
-<ul>
-<li><code>scripts/probe_*.py</code>, <code>scripts/verify_*.py</code>,
-<code>scripts/audit_*.py</code> — the programme’s verifiers. The index
-in the evidence ledger maps every published number to the script and
-section that produces it.</li>
-<li>Search and enumeration programs keep their raw output files
-committed next to them, each with its own reproducibility table (seeds,
-sizes, exact command).</li>
-<li>Prefer exact arithmetic (integer/rational kernels, interval
-arithmetic for certification); confine floating point to logarithms and
-final display.</li>
-</ul>
 <h2 id="standing-warnings">Standing warnings</h2>
 <p>Warnings are earned, not copied: when a computation or convention
 misleads the programme, the lesson goes here, numbered, with the witness
@@ -643,6 +558,10 @@ landscape.</li>
 A regression on a symmetric state cannot catch an asymmetry bug. Derive
 masses and derived laws from the <em>same</em> array, and keep one
 verifier with no index arithmetic at all.</li>
+<li><strong>Check agent_status before working on task</strong> It might
+be related. Dont necessarily read the entire work unless permited, to
+not be confused by alternative directions.</li>
+<li><strong>Agent status might contain stale tasks</strong></li>
 </ol>
 </body>
 </html>

@@ -129,6 +129,30 @@ addressable instead of leaving it in prose. So:
 - Say in the `proved_theorems` note (below) which declarations are statements
   only. A stated-but-unproved theorem must never be listed as coverage.
 
+### Authenticate AI Lean Generate with `claude setup-token` (recommended)
+
+The included `.github/workflows/ai-lean-generate.yml` selects the GitHub
+environment `main` and inherits its secrets. For a Claude Pro or Max account,
+generate or refresh a Claude Code OAuth token on a trusted local machine signed
+in to the account that should fund the runs:
+
+```text
+claude setup-token
+```
+
+Then update this repository's `main` environment secret. The command creates
+`CLAUDE_CODE_OAUTH_TOKEN` if it is missing and replaces its current value if it
+already exists:
+
+```text
+gh secret set CLAUDE_CODE_OAUTH_TOKEN --env main
+```
+
+The equivalent UI path is **Settings → Environments → main → Environment
+secrets → CLAUDE_CODE_OAUTH_TOKEN → Update**. Never commit the token, paste it
+into a pull request, or put it directly in the workflow file. Run
+`claude setup-token` again and update the same environment secret whenever the
+token is exposed, revoked, or tied to the wrong Claude account.
 
 ### A green check is not a proof of what you meant
 

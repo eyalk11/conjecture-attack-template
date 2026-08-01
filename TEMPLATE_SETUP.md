@@ -52,6 +52,10 @@ blueprint scripts):
       register them in `roots`.
 - [ ] If you use AI Lean Generate, keep `.github/workflows/ai-lean-generate.yml`
       and read the trust notes in `README.md`. Otherwise delete it.
+- [ ] For Claude Pro or Max authentication, run `claude setup-token`, then run
+      `gh secret set CLAUDE_CODE_OAUTH_TOKEN --env main` from the instantiated
+      repository. This updates the existing GitHub `main` environment secret
+      or creates it if missing; never put the token in a tracked file.
 
 ## 4. Docs rendering
 
