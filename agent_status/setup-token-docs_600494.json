@@ -4,10 +4,25 @@
   "subject": "setup-token-docs",
   "branch": "agent/setup-token-environment-secret",
   "start_time": "2026-08-01T16:24:19Z",
-  "last_update": "2026-08-01T16:24:19Z",
-  "status": "in_progress",
+  "last_update": "2026-08-01T16:28:22Z",
+  "status": "done",
   "task": "Document the recommended Claude setup-token workflow and updating the GitHub main environment secret, with matching PRs in ai-lean-generate and conjecture-attack-template.",
-  "open_prs": [],
-  "notes": "Using clean task worktrees. This status file tracks the conjecture-attack-template side; ai-lean-generate has no agent_status policy.",
-  "last_commit": ""
+  "open_prs": [
+    {
+      "number": 1,
+      "title": "Docs: add AI Lean setup-token secret refresh",
+      "branch": "agent/setup-token-environment-secret",
+      "base": "master",
+      "purpose": "Real conjecture-attack-template documentation change awaiting review and merge."
+    },
+    {
+      "number": 4,
+      "title": "Docs: explain setup-token environment secret refresh",
+      "branch": "agent/setup-token-environment-secret",
+      "base": "main",
+      "purpose": "Real ai-lean-generate documentation change awaiting review and merge."
+    }
+  ],
+  "notes": "Completed in separate clean worktrees. ai-lean-generate PR #4 passed all 63 unit tests. Template PR #1 passed Pandoc 3.1.4 regeneration and synchronizes a previously stale README.html. Both PRs are drafts.",
+  "last_commit": "f342ada5c01263ae18cbaed2fb7aa20f6bcf7a35"
 }
