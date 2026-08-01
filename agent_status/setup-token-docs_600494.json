@@ -1,0 +1,13 @@
+{
+  "agent_id": "600494",
+  "agent_type": "chatgpt (local)",
+  "subject": "setup-token-docs",
+  "branch": "agent/setup-token-environment-secret",
+  "start_time": "2026-08-01T16:24:19Z",
+  "last_update": "2026-08-01T16:24:19Z",
+  "status": "in_progress",
+  "task": "Document the recommended Claude setup-token workflow and updating the GitHub main environment secret, with matching PRs in ai-lean-generate and conjecture-attack-template.",
+  "open_prs": [],
+  "notes": "Using clean task worktrees. This status file tracks the conjecture-attack-template side; ai-lean-generate has no agent_status policy.",
+  "last_commit": ""
+}
