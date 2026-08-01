@@ -1,6 +1,6 @@
-name: AI Lean Check (manual)
+name: AI Lean Generate (manual)
 
-# Calls the reusable eyalk11/ai-lean-check action against an EXISTING pull
+# Calls the reusable eyalk11/ai-lean-generate action against an EXISTING pull
 # request: it reads the PR diff, hands it to a coding agent that writes or
 # repairs Lean files, verifies them, and (publish: true) pushes its own
 # commits onto the PR branch. Read README.md, "The Lean formalisation, and who
@@ -34,7 +34,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    uses: eyalk11/ai-lean-check/.github/workflows/lean-pr.yml@main
+    uses: eyalk11/ai-lean-generate/.github/workflows/lean-pr.yml@main
     with:
       pr-number: ${{ fromJSON(inputs.pr_number) }}
       environment-name: main

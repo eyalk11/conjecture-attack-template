@@ -128,8 +128,8 @@ and this section is where the two are separated.}}
 ## The Lean formalisation, and who writes it
 
 `lean/` is compiled by `lake build` in CI (`.github/workflows/lean-build.yml`).
-A second workflow, `.github/workflows/ai-lean-check.yml`, calls the reusable
-[`eyalk11/ai-lean-check`](https://github.com/eyalk11/ai-lean-check) action.
+A second workflow, `.github/workflows/ai-lean-generate.yml`, calls the reusable
+[`eyalk11/ai-lean-generate`](https://github.com/eyalk11/ai-lean-generate) action.
 **These two have different trust levels and the distinction matters when
 reviewing.**
 
@@ -176,7 +176,7 @@ addressable instead of leaving it in prose. So:
 - Say in the `proved_theorems` note (below) which declarations are statements
   only. A stated-but-unproved theorem must never be listed as coverage.
 
-### The AI Lean Check does not open pull requests
+### AI Lean Generate does not open pull requests
 
 It is dispatched manually (`workflow_dispatch`) or called with a `pr_number`
 against a pull request that **already exists**. Its steps are: read the PR diff
@@ -190,7 +190,7 @@ So on any PR that has been through this workflow, authorship is mixed:
 | author | what it is | trust |
 |:--|:--|:--|
 | a human, or an agent acting on instructions | the mathematics, and the initial Lean statements | reviewed as usual |
-| the AI Lean Check bot | later commits that make those statements compile | **see below** |
+| the AI Lean Generate bot | later commits that make those statements compile | **see below** |
 
 Use `git log --format='%h %an %s'` on the branch to separate them before
 reviewing. A run that dies before its "Generate and independently verify Lean

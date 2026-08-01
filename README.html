@@ -365,8 +365,8 @@ separated.}}</p>
 formalisation, and who writes it</h2>
 <p><code>lean/</code> is compiled by <code>lake build</code> in CI
 (<code>.github/workflows/lean-build.yml</code>). A second workflow,
-<code>.github/workflows/ai-lean-check.yml</code>, calls the reusable <a
-href="https://github.com/eyalk11/ai-lean-check"><code>eyalk11/ai-lean-check</code></a>
+<code>.github/workflows/ai-lean-generate.yml</code>, calls the reusable <a
+href="https://github.com/eyalk11/ai-lean-generate"><code>eyalk11/ai-lean-generate</code></a>
 action. <strong>These two have different trust levels and the
 distinction matters when reviewing.</strong></p>
 <h3 id="the-main-approach-one-file-per-manuscript-part">The main
@@ -419,7 +419,7 @@ placeholder.</li>
 declarations are statements only. A stated-but-unproved theorem must
 never be listed as coverage.</li>
 </ul>
-<h3 id="the-ai-lean-check-does-not-open-pull-requests">The AI Lean Check
+<h3 id="ai-lean-generate-does-not-open-pull-requests">AI Lean Generate
 does not open pull requests</h3>
 <p>It is dispatched manually (<code>workflow_dispatch</code>) or called
 with a <code>pr_number</code> against a pull request that
@@ -453,7 +453,7 @@ statements</td>
 <td style="text-align: left;">reviewed as usual</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">the AI Lean Check bot</td>
+<td style="text-align: left;">the AI Lean Generate bot</td>
 <td style="text-align: left;">later commits that make those statements
 compile</td>
 <td style="text-align: left;"><strong>see below</strong></td>

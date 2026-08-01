@@ -50,7 +50,7 @@ blueprint scripts):
       `lakefile.toml`; run `lake update` once and commit `lake-manifest.json`.
 - [ ] As the manuscript grows parts, add `lean/part_<x>.lean` files and
       register them in `roots`.
-- [ ] If you use the AI Lean Check, keep `.github/workflows/ai-lean-check.yml`
+- [ ] If you use AI Lean Generate, keep `.github/workflows/ai-lean-generate.yml`
       and read the trust notes in `README.md`. Otherwise delete it.
 
 ## 4. Docs rendering
