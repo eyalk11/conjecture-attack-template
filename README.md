@@ -86,12 +86,6 @@ closes the conjecture.}}
 
 ### The approach, and why it is strong
 
-{{Two to five numbered points. What structural results the attack rests on,
-which reductions are exact (equivalences) versus lossy (sufficient conditions),
-where the constants are paid and how often. If surrogate quantities keep
-failing for a common structural reason, state that reason once, here, so nobody
-re-proposes the pattern.}}
-
 ### What is proved
 
 [`RESULTS.md`](RESULTS.md) is the table. {{One paragraph summary. End with the
@@ -112,47 +106,6 @@ next decisive step. Before proposing anything else, read
 [`REFUTED_CONJECTURES.md`](REFUTED_CONJECTURES.md) — and note that it is
 partial, so absence from it is not evidence a route is alive.}}
 
----
-
-## Historical framing (retired)
-
-*Kept so that older notes remain readable. None of this is the live target.*
-
-{{When the programme's framing moves on, do not delete the old framing — move
-it here, say exactly what superseded it and where the numbers now live. Old
-numerical findings are usually still correct; what retires is the *framing*,
-and this section is where the two are separated.}}
-
----
-
-## The Lean formalisation, and who writes it
-
-`lean/` is compiled by `lake build` in CI (`.github/workflows/lean-build.yml`).
-A second workflow, `.github/workflows/ai-lean-generate.yml`, calls the reusable
-[`eyalk11/ai-lean-generate`](https://github.com/eyalk11/ai-lean-generate) action.
-**These two have different trust levels and the distinction matters when
-reviewing.**
-
-### The main approach: one file per manuscript part
-
-**A formalisation of a Part-X result belongs in `lean/part_<x>.lean`.** The
-part files mirror the parts of [`master.tex`](master.tex) one-to-one, and that
-correspondence is what makes the manuscript auditable against Lean at all: a
-reviewer holding a section of the TeX should be able to open the matching part
-file and find the same theorems, in the same order, under recognisable names.
-
-So, when adding a result:
-
-- Put it in the part file that matches the manuscript section it comes from.
-  Do not open a new topic file merely because the result is new — a new file
-  splits the part's content across two places and the correspondence is lost.
-- Non-part files are shared machinery, external inputs, and pre-manuscript
-  working modules. Add to them when you are extending that machinery; a
-  *numbered manuscript theorem* still goes in its part file, importing
-  whatever machinery it needs.
-- A genuinely new module — a new mechanism with no manuscript part yet — is
-  fine, but it must be registered in the `roots` list (see "Packaging gotcha")
-  and named so that its subject is obvious.
 
 ### State the theorem even when you cannot prove it
 
@@ -176,26 +129,6 @@ addressable instead of leaving it in prose. So:
 - Say in the `proved_theorems` note (below) which declarations are statements
   only. A stated-but-unproved theorem must never be listed as coverage.
 
-### AI Lean Generate does not open pull requests
-
-It is dispatched manually (`workflow_dispatch`) or called with a `pr_number`
-against a pull request that **already exists**. Its steps are: read the PR diff
-→ install the toolchain and run the project's own `lake exe cache get; lake
-build` → hand the diff to a coding agent, which writes or repairs Lean files →
-compile them independently → and, because the caller passes `publish: true`,
-**push its own commits onto the PR branch** and comment.
-
-So on any PR that has been through this workflow, authorship is mixed:
-
-| author | what it is | trust |
-|:--|:--|:--|
-| a human, or an agent acting on instructions | the mathematics, and the initial Lean statements | reviewed as usual |
-| the AI Lean Generate bot | later commits that make those statements compile | **see below** |
-
-Use `git log --format='%h %an %s'` on the branch to separate them before
-reviewing. A run that dies before its "Generate and independently verify Lean
-files" step has authored nothing at all except a failure comment — check the
-step list, not just the red or green mark.
 
 ### A green check is not a proof of what you meant
 
@@ -260,6 +193,8 @@ which reference note describes the limitation. The note is an index for
 reviewers, not a substitute for comparing the Lean statement with the
 authoritative manuscript.
 
+Also Update LEAN_STATE.md 
+
 ### Packaging gotcha
 
 The `lean_lib` in `lakefile.toml` pins an explicit `roots` list and no
@@ -284,16 +219,6 @@ credited items were later withdrawn. Papers themselves go in `lit/`. If no
 item in the scan supplies an inequality the programme can use, say exactly
 that.}}
 
-## Reproducing the numbers
-
-- `scripts/probe_*.py`, `scripts/verify_*.py`, `scripts/audit_*.py` — the
-  programme's verifiers. The index in the evidence ledger maps every published
-  number to the script and section that produces it.
-- Search and enumeration programs keep their raw output files committed next to
-  them, each with its own reproducibility table (seeds, sizes, exact command).
-- Prefer exact arithmetic (integer/rational kernels, interval arithmetic for
-  certification); confine floating point to logarithms and final display.
-
 ## Standing warnings
 
 Warnings are earned, not copied: when a computation or convention misleads the
@@ -317,3 +242,6 @@ learned the hard way, and each generalises:
    symmetric state cannot catch an asymmetry bug. Derive masses and derived
    laws from the *same* array, and keep one verifier with no index arithmetic
    at all.
+5. ** Check agent_status before working on task** It might be related.
+   Dont necessarily read the entire work unless permited, to not be confused by alternative directions.
+   
