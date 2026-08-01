@@ -242,6 +242,7 @@ learned the hard way, and each generalises:
    symmetric state cannot catch an asymmetry bug. Derive masses and derived
    laws from the *same* array, and keep one verifier with no index arithmetic
    at all.
-5. ** Check agent_status before working on task** It might be related.
+5. **Check agent_status before working on task** It might be related.
    Dont necessarily read the entire work unless permited, to not be confused by alternative directions.
+6. **Agent status might contain stale tasks** 
    
