@@ -1,0 +1,27 @@
+% IMPORTANT_THEOREMS.tex — the weighted theorem index.
+%
+% A referenced index of the load-bearing theorems, ordered by weight rather
+% than section number. Update it in the SAME change that adds or materially
+% strengthens a load-bearing theorem (README, "Keep the theorem index
+% synchronized"). Each entry points to the full proof — in master.tex or a
+% designated proof note — and is never a substitute for it.
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+
+\title{ {{CONJECTURE_NAME}}: load-bearing theorems, by weight}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section*{Index}
+
+\begin{enumerate}
+  \item {{Statement, one display.}} \\
+        \emph{Where:} \texttt{master.tex}, label \texttt{thm:example}.
+        \emph{Lean:} \texttt{partA\_example} (or ---).
+        \emph{Why it is load-bearing:} {{one sentence.}}
+\end{enumerate}
+
+\end{document}

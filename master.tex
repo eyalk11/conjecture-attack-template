@@ -1,0 +1,53 @@
+% master.tex — the authoritative manuscript.
+%
+% This file is the source of truth for every theorem statement, proof, number,
+% and label. blueprint/src/content.tex and theorems_with_lean.{md,html} are
+% GENERATED from it (scripts/generate_lean_blueprint.py,
+% scripts/dump_theorems_with_lean.py) — never hand-edit those.
+%
+% Conventions the tooling relies on (note: the theorem extractor does NOT
+% skip TeX comments, so never write a literal part heading or theorem
+% environment inside one):
+%   - the programme's sections are "Part A" ... "Part G" part headings;
+%   - statements use the standard environments theorem / lemma / proposition /
+%     corollary / conjecture, each with a \label{};
+%   - every proof is written out in full here. A proof body that says "see the
+%     dated note" does not belong in this file (AGENTS.md, "Write proofs out
+%     in full").
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+
+\title{ {{CONJECTURE_NAME}}: the authoritative manuscript}
+\author{}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\part{Part A}
+
+\begin{conjecture}[The target]\label{conj:target}
+{{The conjecture, stated precisely, in the normal form the programme
+attacks.}}
+\end{conjecture}
+
+\begin{theorem}[Example placeholder]\label{thm:example}
+{{Replace with the first real reduction. Delete this environment once the
+manuscript has content.}}
+\end{theorem}
+
+\begin{proof}
+{{Full proof here — never a pointer to a note.}}
+\end{proof}
+
+\end{document}

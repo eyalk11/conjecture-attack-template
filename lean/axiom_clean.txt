@@ -1,0 +1,5 @@
+# Declarations claimed UNCONDITIONAL: they must depend on nothing beyond
+# propext, Classical.choice and Quot.sound. Checked by
+# scripts/lean_audit_sorry_axioms.lean in CI; populate the list with
+# `AUDIT_REPORT=1 lake env lean scripts/lean_audit_sorry_axioms.lean`.
+# One declaration name per line; `#` starts a comment.

@@ -1,0 +1,88 @@
+name: Compile Lean Blueprint
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "blueprint/**"
+      - "lean/**"
+      - "scripts/dump_theorems_with_lean.py"
+      - "scripts/generate_lean_blueprint.py"
+      - "scripts/theorem_lean_correspondence.json"
+      - "master.tex"
+      - "lakefile.toml"
+      - "lake-manifest.json"
+      - "lean-toolchain"
+      - "requirements-blueprint.txt"
+      - ".github/workflows/blueprint.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "lean-blueprint-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  blueprint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Lean
+        uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-mathlib-cache: false
+
+      - name: Install blueprint dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes graphviz graphviz-dev
+          python3 -m pip install --requirement requirements-blueprint.txt
+
+      - name: Regenerate blueprint source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/generate_lean_blueprint.py
+          python3 scripts/dump_theorems_with_lean.py --format html --output theorems_with_lean.html
+          python3 scripts/dump_theorems_with_lean.py --format markdown --output theorems_with_lean.md
+
+      - name: Build Lean project
+        shell: bash
+        run: |
+          set -euo pipefail
+          lake exe cache get
+          lake build
+
+      - name: Compile blueprint and check Lean declarations
+        shell: bash
+        run: |
+          set -euo pipefail
+          leanblueprint web
+          leanblueprint pdf
+          leanblueprint checkdecls
+
+      - name: Confirm generated source is current
+        run: >-
+          git diff --exit-code -- blueprint/src/content.tex
+          theorems_with_lean.html theorems_with_lean.md
+
+      - name: Upload private blueprint site
+        uses: actions/upload-artifact@v4
+        with:
+          name: lean-blueprint
+          path: |
+            blueprint/web
+            blueprint/print/print.pdf
+            blueprint/lean_decls
+          if-no-files-found: error

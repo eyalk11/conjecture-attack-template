@@ -1,0 +1,30 @@
+\documentclass[a4paper]{report}
+
+\usepackage[margin=1.15in]{geometry}
+\usepackage{expl3}
+\usepackage{amssymb,amsthm,mathtools}
+\usepackage{bm}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[unicode,colorlinks=true,linkcolor=blue,urlcolor=magenta,citecolor=blue]{hyperref}
+\usepackage[nameinlink,capitalise]{cleveref}
+\usepackage[warnings-off={mathtools-colon,mathtools-overbracket}]{unicode-math}
+\setmainfont{STIX Two Text}
+\setmathfont{STIX Two Math}
+
+% Ledger remarks contain long Lean identifiers.  The generator inserts
+% explicit breaks after underscores; the emergency stretch handles the
+% remaining narrow cases without allowing text to escape the page.
+\setlength{\emergencystretch}{3em}
+
+\input{macros/common}
+\input{macros/print}
+
+\title{ {{CONJECTURE_NAME}} formalization blueprint}
+\author{ {{AUTHOR}} }
+
+\begin{document}
+\maketitle
+\tableofcontents
+\input{content}
+\end{document}

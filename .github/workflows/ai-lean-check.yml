@@ -1,0 +1,81 @@
+name: AI Lean Check (manual)
+
+# Calls the reusable eyalk11/ai-lean-check action against an EXISTING pull
+# request: it reads the PR diff, hands it to a coding agent that writes or
+# repairs Lean files, verifies them, and (publish: true) pushes its own
+# commits onto the PR branch. Read README.md, "The Lean formalisation, and who
+# writes it", for the trust model before reviewing anything it produced.
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to formalize and verify
+        required: true
+        type: string
+      model:
+        description: Claude model ID
+        required: false
+        default: claude-sonnet-5
+        type: string
+  workflow_call:
+    inputs:
+      pr_number:
+        description: Pull request number to formalize and verify
+        required: true
+        type: number
+      model:
+        description: Claude model ID
+        required: false
+        default: claude-sonnet-5
+        type: string
+
+jobs:
+  lean:
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: eyalk11/ai-lean-check/.github/workflows/lean-pr.yml@main
+    with:
+      pr-number: ${{ fromJSON(inputs.pr_number) }}
+      environment-name: main
+      provider: claude-code
+      model: ${{ inputs.model }}
+      use-mathlib-cache: "false"
+      # The action runs setup with continue-on-error and feeds its output to
+      # the agent, so a project that does not currently build does not prevent
+      # the agent from running -- it is the context it needs.
+      setup-command: |
+        lake exe cache get
+        lake build
+      imports: |
+        Conjecture
+      task: |
+        Inspect the pull-request diff, formalize the changed proof or Lean claim
+        in clearly named project Lean files, and repair compiler failures before
+        finishing.
+
+        PRESERVE THE THEOREM STATEMENTS. Repair proofs, not statements. Do not
+        add hypotheses, loosen constants, or narrow conclusions to make a proof
+        go through. If a statement is genuinely false or ill-typed, say so in
+        your summary and leave it failing rather than silently weakening it.
+        Note this is guidance, not an enforced check -- see README.md
+        "The Lean formalisation, and who writes it".
+      agent-max-turns: "120"
+      deps-sorry-policy: warn
+      # A new module is unusable until Lake sees it and the root module imports
+      # it, so both stay editable regardless of edit-policy.
+      project-mapping-files: |
+        lakefile.toml
+        lean/Conjecture.lean
+      axiom-policy: warn
+      # The scan runs at the PR's head revision, so retired files that still
+      # existed there must stay listed.
+      sorry-allowed-files: |
+        lean/*_deps.lean
+        lean/**/*_deps.lean
+        lean/conjectures.lean
+        lean/external_theorems.lean
+      verification-command: |
+        lake build
+      publish: true
+    secrets: inherit

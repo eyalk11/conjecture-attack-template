@@ -1,0 +1,26 @@
+# Rename "conjecture"/"Conjecture" to your project's library name, and keep
+# the name in sync with lean/Conjecture.lean, the workflows' `imports:` input,
+# and LEAN_LIB in scripts/generate_lean_blueprint.py.
+#
+# PACKAGING GOTCHA (see README): `roots` is an explicit list and there are no
+# `globs`, so ONLY the listed modules belong to the library. A new file under
+# lean/ that is not named here cannot be imported, and the build fails with
+# `unknown module prefix`. Add every new module to `roots`.
+name = "conjecture"
+version = "0.1.0"
+defaultTargets = ["Conjecture"]
+
+[[require]]
+name = "checkdecls"
+git = "https://github.com/PatrickMassot/checkdecls.git"
+rev = "3d425859e73fcfbef85b9638c2a91708ef4a22d4"
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4"
+rev = "38b74e6b6295a228f04cde8588d5a01bfa022ed1"
+
+[[lean_lib]]
+name = "Conjecture"
+srcDir = "lean"
+roots = ["Conjecture", "conjectures", "external_theorems"]

@@ -1,0 +1,43 @@
+#!/bin/sh
+
+# Regenerate the checked-in HTML views and stage them, so the generated file
+# lands in the same commit as the Markdown it was generated from.
+# Set SKIP_DOC_RENDER=1 for a one-off commit that should skip rendering.
+if [ "${SKIP_DOC_RENDER:-0}" = "1" ]; then
+  exit 0
+fi
+
+repo_root=$(git rev-parse --show-toplevel) || exit 0
+cd "$repo_root" || exit 1
+
+# Only render when this commit actually touches a source document. Note that
+# render_docs.py reads the *working tree*, not the index, so a partial commit
+# (`git commit -- README.md`, `git commit -p`) stages HTML built from whatever
+# is on disk.
+if ! git diff --cached --name-only |
+  grep -Eq '^(README\.md|docs/program_map\.md|NEXT_STEPS\.md)$'
+then
+  exit 0
+fi
+
+if command -v powershell.exe >/dev/null 2>&1; then
+  # Git for Windows may expose Python through a PowerShell/pyenv shim that
+  # cannot be invoked directly from its POSIX shell.
+  powershell.exe -NoProfile -NonInteractive \
+    -Command "python tools/render_docs.py" || exit 1
+elif command -v python3 >/dev/null 2>&1; then
+  python3 tools/render_docs.py || exit 1
+elif command -v python >/dev/null 2>&1; then
+  python tools/render_docs.py || exit 1
+elif command -v py >/dev/null 2>&1; then
+  py -3 tools/render_docs.py || exit 1
+else
+  echo "pre-commit: Python not found; cannot render tools/render_docs.py" >&2
+  exit 1
+fi
+
+for out in README.html NEXT_STEPS.html docs/program_map.html; do
+  [ -f "$out" ] && git add -- "$out"
+done
+
+exit 0

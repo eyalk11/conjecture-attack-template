@@ -1,0 +1,13 @@
+div.theorem_thmcontent,
+div.proposition_thmcontent,
+div.lemma_thmcontent,
+div.corollary_thmcontent,
+div.conjecture_thmcontent {
+  border-left: .15rem solid #334155;
+  padding-left: .8rem;
+}
+
+div.remark_thmcontent {
+  border-left: .1rem solid #d97706;
+  padding-left: .8rem;
+}

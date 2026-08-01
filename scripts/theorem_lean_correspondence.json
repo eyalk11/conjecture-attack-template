@@ -1,0 +1,12 @@
+{
+  "conj:target": {
+    "lean": "CONJ_target",
+    "status": "statement only",
+    "lean_remark": "Placeholder: the target conjecture is stated (not proved) in lean/conjectures.lean under the CONJ_ prefix. Only entries with status exactly 'full' receive \\leanok."
+  },
+  "thm:example": {
+    "lean": "CONJ_target",
+    "status": "statement only",
+    "lean_remark": "Placeholder entry for the example theorem environment in master.tex; replace both together with real content. Every manuscript label must have exactly one entry in this ledger."
+  }
+}

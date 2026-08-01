@@ -1,0 +1,20 @@
+# Lean
+.lake/
+lake-packages/
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Python
+__pycache__/
+*.pyc
+
+# Blueprint build output (the generated content.tex IS tracked)
+blueprint/web/
+blueprint/print/

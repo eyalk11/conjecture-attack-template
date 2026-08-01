@@ -1,0 +1,181 @@
+name: Lean build
+
+# Blanket push/pull_request triggers fan out across every active agent branch
+# and produce overlapping runs faster than they can finish. What is here is
+# deliberately narrow -- `master` only, and only when the commit actually
+# touches Lean. Agent branches are unwatched and use `workflow_dispatch`.
+#
+# `pull_request` is scoped to PRs *targeting* master, so it is one run per PR,
+# not one per agent branch push: a branch that nobody has opened a PR for is
+# still unwatched. GitHub builds the merge result (refs/pull/N/merge), so this
+# checks what master would become -- which is the case the push trigger only
+# catches after the fact, when two branches each edit `lakefile.toml` roots and
+# merge cleanly but do not build.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - 'lean/**'
+      - 'lakefile.toml'
+      - 'lake-manifest.json'
+      - 'lean-toolchain'
+      - '.github/workflows/lean-build.yml'
+#
+# The `pull_request` trigger deliberately carries no `paths:` filter, unlike the
+# `push` one. A required status check that never runs is not "skipped", it is
+# *pending*, and GitHub blocks the merge forever -- so a doc-only PR would be
+# unmergeable. The filtering therefore moves inside the job: the check always
+# reports, and the expensive steps are the ones that are conditional.
+#
+# `types` omits the default `synchronize`, so a PR is built when it appears and
+# not again on every push to it -- one run per PR. The cost is that a later
+# push leaves the new head SHA with no result: re-run the job from the Actions
+# tab, or use `workflow_dispatch`, when you want the updated branch checked.
+# This is also why `build` should NOT be marked a required check while
+# `synchronize` is absent -- a required check with no result on the head SHA is
+# pending, not skipped, and blocks the merge.
+#
+# `edited` is here for one case only: a pull request opened against another
+# branch and *retargeted* to master later. That is an `edited` event, not an
+# `opened` one, and `branches: [master]` filters the original `opened` out --
+# so without this a stacked PR reaches master having never been built. `edited`
+# also fires on title and body edits, which cannot change what merging would
+# do; the `scope` step below drops those, so this costs one no-op run, not a
+# build.
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - ready_for_review
+      - edited
+    branches:
+      - master
+
+# Superseded runs are cancelled, so pushing three times to a PR in a minute
+# leaves one build, not three. Never cancel a `master` run: that is the record
+# of whether the branch is green.
+concurrency:
+  group: lean-build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # depth 2 so the pull_request merge commit has both parents: HEAD^1 is the
+      # base master tip, HEAD is the merge result, and the diff between them is
+      # exactly what the PR would add to master.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      # `push` already passed the `paths:` filter above, and workflow_dispatch is
+      # someone asking for the build on purpose; only `pull_request` has to be
+      # decided here. Keep this list identical to the `push` filter.
+      - name: Does this PR touch Lean?
+        id: scope
+        shell: bash
+        env:
+          # Empty unless the base branch is what the `edited` event changed.
+          # Read through the environment rather than interpolated into the
+          # script: it is a branch name, and branch names are attacker-chosen.
+          EDITED_BASE_FROM: ${{ github.event.changes.base.ref.from }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" != 'pull_request' ]; then
+            echo "lean=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Retargeting to master is the `edited` we want to build; a title or
+          # body edit is not. See the `types` comment at the top of the file.
+          if [ "${{ github.event.action }}" = 'edited' ] && [ -z "${EDITED_BASE_FROM:-}" ]; then
+            echo "lean=false" >> "$GITHUB_OUTPUT"
+            echo "Edited, but the base branch did not change; nothing to build."
+            exit 0
+          fi
+          changed="$(git diff --name-only HEAD^1 HEAD)"
+          if printf '%s\n' "$changed" | grep -qE \
+              '^(lean/|lakefile\.toml$|lake-manifest\.json$|lean-toolchain$|\.github/workflows/lean-build\.yml$)'; then
+            echo "lean=true" >> "$GITHUB_OUTPUT"
+            echo "Lean-relevant changes:"
+            printf '%s\n' "$changed" | grep -E \
+              '^(lean/|lakefile\.toml$|lake-manifest\.json$|lean-toolchain$|\.github/workflows/lean-build\.yml$)'
+          else
+            echo "lean=false" >> "$GITHUB_OUTPUT"
+            echo "No Lean-relevant changes; the build steps below are skipped and"
+            echo "this check reports success so the PR is not held pending."
+          fi
+
+      # The runner starts empty every time, so .lake and the toolchain are
+      # carried between runs by actions/cache instead. Keyed on the toolchain
+      # and manifest, with prefix fallback so a mathlib bump restores the
+      # previous cache and rebuilds incrementally rather than from scratch.
+      - name: Restore Lean cache
+        if: steps.scope.outputs.lean == 'true'
+        id: lean-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .lake
+            ~/.elan
+          key: lean-build-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
+          restore-keys: lean-build-${{ runner.os }}-
+
+      - name: Install Lean
+        if: steps.scope.outputs.lean == 'true'
+        uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-mathlib-cache: false
+
+      - name: Fetch the pinned mathlib build cache
+        if: steps.scope.outputs.lean == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          lake exe cache get
+
+      - name: Build the project
+        if: steps.scope.outputs.lean == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          lake build
+
+      # Saved only after a successful build, deliberately: a cache key is
+      # immutable once written, so saving a failed run's partial .lake here
+      # would permanently pin an incomplete cache under this manifest's key.
+      - name: Save Lean cache
+        if: steps.scope.outputs.lean == 'true' && steps.lean-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .lake
+            ~/.elan
+          key: lean-build-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
+
+      - name: Confirm the build left tracked files unchanged
+        if: steps.scope.outputs.lean == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- lakefile.toml lake-manifest.json lean
+
+      # A green `lake build` says the files elaborate, not that they prove
+      # anything -- see README, "A green check is not a proof of what you
+      # meant." This is the part that checks the holes are where they are
+      # declared to be, and that the results claimed unconditional still are.
+      - name: Audit sorry confinement and axiom footprint
+        if: steps.scope.outputs.lean == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          lake env lean scripts/lean_audit_sorry_axioms.lean

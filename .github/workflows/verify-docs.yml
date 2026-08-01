@@ -1,0 +1,235 @@
+name: Verify generated docs
+
+# This repository checks in several files that are *generated* from a source of
+# truth, and AGENTS.md forbids hand-editing them:
+#
+#   README.html, NEXT_STEPS.html, docs/program_map.html
+#       <- tools/render_docs.py (pandoc), normally via .githooks/pre-commit
+#   theorems_with_lean.{md,html}, blueprint/src/content.tex
+#       <- scripts/dump_theorems_with_lean.py, scripts/generate_lean_blueprint.py
+#
+# Installing the pre-commit hook is optional (`git config core.hooksPath
+# .githooks`), and the theorem tables have no hook at all, so a stale generated
+# file otherwise reaches master silently. This job re-generates into the working
+# tree and fails if the result differs from what was committed.
+#
+# It deliberately does NOT regenerate and push. That races the hook and needs
+# write access to master; a red check is the intended outcome, not a surprise
+# bot commit.
+
+# The triggers are deliberately the same shape as lean-build.yml: `master` only,
+# path-filtered on push, and one run per pull request rather than one per push
+# to every agent branch. See that file for why blanket triggers are avoided.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - 'README.md'
+      - 'NEXT_STEPS.md'
+      - 'docs/program_map.md'
+      - 'README.html'
+      - 'NEXT_STEPS.html'
+      - 'docs/program_map.html'
+      - 'tools/render_docs.py'
+      - 'master.tex'
+      - 'scripts/theorem_lean_correspondence.json'
+      - 'scripts/dump_theorems_with_lean.py'
+      - 'scripts/generate_lean_blueprint.py'
+      - 'theorems_with_lean.md'
+      - 'theorems_with_lean.html'
+      - 'blueprint/src/content.tex'
+      - '.github/workflows/verify-docs.yml'
+#
+# As in lean-build.yml, the `pull_request` trigger carries no `paths:` filter.
+# A required status check that never runs is not "skipped", it is *pending*, and
+# GitHub blocks the merge forever -- so a PR touching no generated file would be
+# unmergeable. The filtering moves into the `scope` job below: the checks always
+# report, and the work is what is conditional.
+#
+# `types` omits the default `synchronize`, so a PR is checked when it appears
+# and not again on every push to it. The cost is that a later push leaves the
+# new head SHA with no result: re-run from the Actions tab, or use
+# `workflow_dispatch`, when you want the updated branch checked.
+#
+# `edited` covers the stacked-PR case: a pull request opened against another
+# branch and retargeted to master later fires `edited`, not `opened`, and
+# `branches: [master]` filtered its `opened` out -- so it would otherwise reach
+# master unchecked. Title and body edits fire `edited` too and are dropped in
+# the `scope` job below.
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - ready_for_review
+      - edited
+    branches:
+      - master
+
+# Superseded PR runs are cancelled; a `master` run never is, since that is the
+# record of whether the branch is green.
+concurrency:
+  group: verify-docs-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # Only `pull_request` has to be decided here: `push` already passed the
+  # `paths:` filter above, and workflow_dispatch is someone asking for the check
+  # on purpose. Keep these two lists identical to the `push` filter.
+  scope:
+    name: What does this change touch?
+    runs-on: ubuntu-latest
+    outputs:
+      html: ${{ steps.scope.outputs.html }}
+      views: ${{ steps.scope.outputs.views }}
+    steps:
+      # depth 2 so the pull_request merge commit has both parents: HEAD^1 is the
+      # base master tip, HEAD is the merge result, and the diff between them is
+      # exactly what the PR would add to master.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - id: scope
+        shell: bash
+        env:
+          # Empty unless the base branch is what the `edited` event changed.
+          # Read through the environment rather than interpolated into the
+          # script: it is a branch name, and branch names are attacker-chosen.
+          EDITED_BASE_FROM: ${{ github.event.changes.base.ref.from }}
+        run: |
+          set -euo pipefail
+          html_re='^(README\.(md|html)$|NEXT_STEPS\.(md|html)$|docs/program_map\.(md|html)$|tools/render_docs\.py$|\.github/workflows/verify-docs\.yml$)'
+          views_re='^(master\.tex$|scripts/(theorem_lean_correspondence\.json|dump_theorems_with_lean\.py|generate_lean_blueprint\.py)$|theorems_with_lean\.(md|html)$|blueprint/src/content\.tex$|\.github/workflows/verify-docs\.yml$)'
+          if [ "${{ github.event_name }}" != 'pull_request' ]; then
+            echo "html=true" >> "$GITHUB_OUTPUT"
+            echo "views=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Retargeting to master is the `edited` we want to check; a title or
+          # body edit is not. See the `types` comment at the top of the file.
+          if [ "${{ github.event.action }}" = 'edited' ] && [ -z "${EDITED_BASE_FROM:-}" ]; then
+            echo "html=false" >> "$GITHUB_OUTPUT"
+            echo "views=false" >> "$GITHUB_OUTPUT"
+            echo "Edited, but the base branch did not change; nothing to check."
+            exit 0
+          fi
+          changed="$(git diff --name-only HEAD^1 HEAD)"
+          for pair in "html:$html_re" "views:$views_re"; do
+            key="${pair%%:*}"
+            re="${pair#*:}"
+            if printf '%s\n' "$changed" | grep -qE "$re"; then
+              echo "$key=true" >> "$GITHUB_OUTPUT"
+              echo "$key-relevant changes:"
+              printf '%s\n' "$changed" | grep -E "$re"
+            else
+              echo "$key=false" >> "$GITHUB_OUTPUT"
+              echo "No $key-relevant changes; those steps are skipped and the"
+              echo "check reports success so the PR is not held pending."
+            fi
+          done
+
+  rendered-html:
+    name: Rendered HTML is up to date
+    needs: scope
+    runs-on: ubuntu-latest
+    env:
+      # Pinned, not apt's pandoc: the default HTML template changes between
+      # pandoc releases, so an unpinned runner reports a diff for every file
+      # whenever the image moves. Bump this and the committed HTML together,
+      # never separately.
+      PANDOC_VERSION: '3.1.4'
+    steps:
+      - uses: actions/checkout@v4
+        if: needs.scope.outputs.html == 'true'
+
+      - uses: actions/setup-python@v5
+        if: needs.scope.outputs.html == 'true'
+        with:
+          python-version: '3.x'
+
+      - name: Install pinned pandoc
+        if: needs.scope.outputs.html == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://github.com/jgm/pandoc/releases/download/${PANDOC_VERSION}/pandoc-${PANDOC_VERSION}-1-amd64.deb"
+          curl -fsSL -o /tmp/pandoc.deb "$url"
+          sudo dpkg -i /tmp/pandoc.deb
+          installed=$(pandoc --version | head -1 | awk '{print $2}')
+          echo "pandoc $installed"
+          if [ "$installed" != "${PANDOC_VERSION}" ]; then
+            echo "::error::Expected pandoc ${PANDOC_VERSION}, got ${installed}."
+            exit 1
+          fi
+
+      - name: Re-render
+        if: needs.scope.outputs.html == 'true'
+        shell: bash
+        run: python tools/render_docs.py
+
+      - name: Fail if the committed HTML is stale
+        if: needs.scope.outputs.html == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # `git status --porcelain`, not `git diff`: a generated file that was
+          # never committed at all is untracked, and `git diff` cannot see it,
+          # so a missing README.html would otherwise pass green.
+          dirty=$(git status --porcelain -- 'README.html' 'NEXT_STEPS.html' 'docs/program_map.html')
+          if [ -n "$dirty" ]; then
+            echo "::error::Rendered HTML differs from the committed files."
+            echo "$dirty"
+            git diff -- 'README.html' 'NEXT_STEPS.html' 'docs/program_map.html' || true
+            echo "Run 'python tools/render_docs.py' and commit the result"
+            echo "(or check that your local pandoc is ${PANDOC_VERSION})."
+            exit 1
+          fi
+          echo "Rendered HTML matches the committed files."
+
+  generated-views:
+    name: Theorem tables and blueprint are up to date
+    needs: scope
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        if: needs.scope.outputs.views == 'true'
+
+      - uses: actions/setup-python@v5
+        if: needs.scope.outputs.views == 'true'
+        with:
+          python-version: '3.x'
+
+      # Both generators are standard-library only, so there is nothing to
+      # install and no lockfile to drift.
+      - name: Regenerate the derived views
+        if: needs.scope.outputs.views == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/generate_lean_blueprint.py
+          python scripts/dump_theorems_with_lean.py
+          python scripts/dump_theorems_with_lean.py \
+            --format html --output theorems_with_lean.html
+
+      - name: Fail if a derived view is stale
+        if: needs.scope.outputs.views == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          targets="theorems_with_lean.md theorems_with_lean.html blueprint/src/content.tex"
+          dirty=$(git status --porcelain -- $targets)
+          if [ -n "$dirty" ]; then
+            echo "::error::A generated view differs from the committed file."
+            echo "$dirty"
+            git diff -- $targets || true
+            echo "The authoritative source is master.tex. Edit it first, then"
+            echo "regenerate with scripts/generate_lean_blueprint.py and"
+            echo "scripts/dump_theorems_with_lean.py, and commit the result."
+            exit 1
+          fi
+          echo "Derived views match the committed files."
